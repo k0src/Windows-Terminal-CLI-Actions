@@ -39,52 +39,6 @@ int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme,
   return 1;
 }
 
-class FontManager {
-public:
-  bool fontExists(const std::string &fontName) {
-    HDC hdc = GetDC(NULL);
-    if (!hdc)
-      return false;
-
-    LOGFONT lf = {0};
-    lf.lfCharSet = DEFAULT_CHARSET;
-
-    std::string targetFont = fontName;
-    int result = EnumFontFamiliesEx(hdc, &lf, (FONTENUMPROC)EnumFontFamExProc,
-                                    reinterpret_cast<LPARAM>(&targetFont), 0);
-
-    ReleaseDC(NULL, hdc);
-    return (result == 0);
-  }
-
-  json readFontData() {
-    std::ifstream file("font_data.json");
-    if (!file) {
-      std::cerr << "Error: font_data.json not found." << std::endl;
-      std::exit(1);
-    }
-
-    try {
-      json data;
-      file >> data;
-      return data;
-    } catch (...) {
-      std::cerr << "Error: Failed to parse font_data.json." << std::endl;
-      std::exit(1);
-    }
-  }
-
-  bool findFontInData(const json &fontData, const std::string &fontName, std::string &fontUrl) {
-    for (const auto &font : fontData) {
-      if (font["Name"].get<std::string>() == fontName) {
-        fontUrl = font["URL"].get<std::string>();
-        return true;
-      }
-    }
-    return false;
-  }
-};
-
 class FileDownloader {
 public:
   bool downloadFile(const std::string &url, const std::string &filePath) {
@@ -231,6 +185,61 @@ private:
   }
 };
 
+class FontManager {
+private:
+  const std::string FONT_DATA_URL = "https://raw.githubusercontent.com/k0src/Windows-Terminal-CLI-Actions/992ac7b89305645fe6c972cbffde7592c8f32b73/font_data.json";
+  FileDownloader downloader;
+
+public:
+  bool fontExists(const std::string &fontName) {
+    HDC hdc = GetDC(NULL);
+    if (!hdc)
+      return false;
+
+    LOGFONT lf = {0};
+    lf.lfCharSet = DEFAULT_CHARSET;
+
+    std::string targetFont = fontName;
+    int result = EnumFontFamiliesEx(hdc, &lf, (FONTENUMPROC)EnumFontFamExProc,
+                                    reinterpret_cast<LPARAM>(&targetFont), 0);
+
+    ReleaseDC(NULL, hdc);
+    return (result == 0);
+  }
+
+  json readFontData() {
+    std::string tempPath = std::getenv("TEMP");
+    std::string fontDataPath = tempPath + "\\font_data.json";
+    
+    if (downloader.downloadFile(FONT_DATA_URL, fontDataPath)) {
+      std::ifstream file(fontDataPath);
+      if (file) {
+        try {
+          json data;
+          file >> data;
+          file.close();
+          std::filesystem::remove(fontDataPath);
+          return data;
+        } catch (...) {
+          std::cerr << "Error: Failed to parse font data." << std::endl;
+          file.close();
+          std::filesystem::remove(fontDataPath);
+        }
+      }
+    }
+  }
+
+  bool findFontInData(const json &fontData, const std::string &fontName, std::string &fontUrl) {
+    for (const auto &font : fontData) {
+      if (font["Name"].get<std::string>() == fontName) {
+        fontUrl = font["URL"].get<std::string>();
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
 class WTAFileManager {
 private:
   json settings;
@@ -348,7 +357,7 @@ private:
     commands["font"] = [this](const std::vector<std::string> &args) { fontCommand(args); };
     commands["createprofile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
     commands["elevate"] = [this](const std::vector<std::string> &args) { elevateCommand(args); };
-    commands["font-install"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
+    commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
   }
 
   void helpCommand(const std::vector<std::string> &args) {
@@ -400,7 +409,7 @@ private:
 
     if (!fontManager.fontExists(fontName)) {
       std::cerr << "Font not found on system: " << fontName << std::endl;
-      std::cout << "Use: wta font-install <fontName> to install a font." << std::endl;
+      std::cout << "Use: wta install-font <fontName> to install a font." << std::endl;
       return;
     }
 
@@ -422,8 +431,8 @@ private:
 
   void fontInstallCommand(const std::vector<std::string> &args) {
     if (args.empty()) {
-      std::cerr << "Usage: wta font-install <fontName|help>" << std::endl;
-      std::cout << "Use: wta font-install help to see a list of available Nerd Fonts." << std::endl;
+      std::cerr << "Usage: wta install-font <fontName|help>" << std::endl;
+      std::cout << "Use: wta install-font help to see a list of available Nerd Fonts." << std::endl;
       return;
     }
 
