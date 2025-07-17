@@ -326,6 +326,72 @@ public:
     }
     return false;
   }
+
+  bool actionIdExists(const std::string &actionId) {
+    if (!settings.contains("actions")) {
+      return false;
+    }
+    
+    for (const auto &action : settings["actions"]) {
+      if (action.contains("id") && action["id"] == actionId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void addAction(const json &newAction) {
+    if (!settings.contains("actions")) {
+      settings["actions"] = json::array();
+    }
+    settings["actions"].push_back(newAction);
+  }
+
+  void addKeybinding(const json &newKeybinding) {
+    if (!settings.contains("keybindings")) {
+      settings["keybindings"] = json::array();
+    }
+    settings["keybindings"].push_back(newKeybinding);
+  }
+
+  bool removeAction(const std::string &actionId) {
+    if (!settings.contains("actions")) {
+      return false;
+    }
+    
+    auto &actions = settings["actions"];
+    bool removed = false;
+    
+    for (auto it = actions.begin(); it != actions.end(); ++it) {
+      if (it->contains("id") && (*it)["id"] == actionId) {
+        actions.erase(it);
+        removed = true;
+        break;
+      }
+    }
+    
+    return removed;
+  }
+
+  int removeKeybindingsForAction(const std::string &actionId) {
+    if (!settings.contains("keybindings")) {
+      return 0;
+    }
+    
+    auto &keybindings = settings["keybindings"];
+    int removedCount = 0;
+    
+    for (auto it = keybindings.begin(); it != keybindings.end();) {
+      if (it->contains("id") && (*it)["id"] == actionId) {
+        it = keybindings.erase(it);
+        removedCount++;
+      } else {
+        ++it;
+      }
+    }
+    
+    return removedCount;
+  }
 };
 
 class WTACommandManager {
@@ -358,6 +424,8 @@ private:
     commands["createprofile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
     commands["elevate"] = [this](const std::vector<std::string> &args) { elevateCommand(args); };
     commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
+    commands["add-action"] = [this](const std::vector<std::string> &args) { addActionCommand(args); };
+    commands["remove-action"] = [this](const std::vector<std::string> &args) { removeActionCommand(args); };
   }
 
   void helpCommand(const std::vector<std::string> &args) {
@@ -540,6 +608,141 @@ private:
     json &settings = fileManager.getSettings();
     settings["profiles"][profileName]["elevate"] = (elevateOption == "true");
     fileManager.writeSettings();
+  }
+
+  void addActionCommand(const std::vector<std::string> &args) {
+    if (args.size() < 2) {
+      std::cerr << "Usage: wta add-action <command> <id> [keys] [name] [icon] [action] [arguments...]" << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  Simple command: wta add-action closeWindow User.MyCloseWindow alt+f4" << std::endl;
+      std::cout << "  With action: wta add-action newTab User.MyNewTab ctrl+shift+1 \"New Tab\" --action newTab --index 0" << std::endl;
+      std::cout << "  With commandline: wta add-action wt User.MyCommand ctrl+shift+o \"My Setup\" --commandline \"new-tab pwsh.exe\"" << std::endl;
+      return;
+    }
+
+    std::string command = args[0];
+    std::string id = args[1];
+
+    if (fileManager.actionIdExists(id)) {
+      std::cerr << "Error: Action ID '" << id << "' already exists." << std::endl;
+      return;
+    }
+
+    json newAction;
+    newAction["id"] = id;
+
+    std::string keys = "";
+    std::string name = "";
+    std::string icon = "";
+    std::string action = "";
+    json commandObj;
+    bool hasComplexCommand = false;
+
+    for (size_t i = 2; i < args.size(); i++) {
+      if (args[i] == "--action" && i + 1 < args.size()) {
+        action = args[++i];
+        hasComplexCommand = true;
+      } else if (args[i] == "--name" && i + 1 < args.size()) {
+        name = args[++i];
+      } else if (args[i] == "--icon" && i + 1 < args.size()) {
+        icon = args[++i];
+      } else if (args[i] == "--keys" && i + 1 < args.size()) {
+        keys = args[++i];
+      } else if (args[i] == "--commandline" && i + 1 < args.size()) {
+        commandObj["action"] = command;
+        commandObj["commandline"] = args[++i];
+        hasComplexCommand = true;
+      } else if (args[i] == "--index" && i + 1 < args.size()) {
+        try {
+          commandObj["index"] = std::stoi(args[++i]);
+          hasComplexCommand = true;
+        } catch (...) {
+          std::cerr << "Error: Invalid index value." << std::endl;
+          return;
+        }
+      } else if (args[i] == "--profile" && i + 1 < args.size()) {
+        commandObj["profile"] = args[++i];
+        hasComplexCommand = true;
+      } else if (args[i] == "--directory" && i + 1 < args.size()) {
+        commandObj["startingDirectory"] = args[++i];
+        hasComplexCommand = true;
+      } else if (args[i] == "--size" && i + 1 < args.size()) {
+        commandObj["size"] = args[++i];
+        hasComplexCommand = true;
+      } else if (args[i] == "--split" && i + 1 < args.size()) {
+        commandObj["split"] = args[++i];
+        hasComplexCommand = true;
+      } else if (i == 2 && args[i].find("+") != std::string::npos) {
+        keys = args[i];
+      } else if (i == 3 && keys != "" && name == "") {
+        name = args[i];
+      } else if (i == 4 && name != "" && icon == "") {
+        icon = args[i];
+      }
+    }
+
+    if (hasComplexCommand) {
+      if (action != "") {
+        commandObj["action"] = action;
+      } else if (commandObj.find("action") == commandObj.end()) {
+        commandObj["action"] = command;
+      }
+      newAction["command"] = commandObj;
+    } else {
+      newAction["command"] = command;
+    }
+
+    if (!name.empty()) {
+      newAction["name"] = name;
+    }
+    if (!icon.empty()) {
+      newAction["icon"] = icon;
+    }
+
+    fileManager.addAction(newAction);
+
+    if (!keys.empty()) {
+      json keybinding;
+      keybinding["keys"] = keys;
+      keybinding["id"] = id;
+      fileManager.addKeybinding(keybinding);
+    }
+
+    fileManager.writeSettings();
+
+    std::cout << "Action '" << id << "' added successfully." << std::endl;
+    if (!keys.empty()) {
+      std::cout << "Keybinding '" << keys << "' assigned to action." << std::endl;
+    }
+  }
+
+  void removeActionCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta remove-action <actionId>" << std::endl;
+      std::cout << "Example: wta remove-action User.MyCloseWindow" << std::endl;
+      return;
+    }
+
+    std::string actionId = args[0];
+    
+    if (!fileManager.actionIdExists(actionId)) {
+      std::cerr << "Error: Action ID '" << actionId << "' not found." << std::endl;
+      return;
+    }
+
+    bool actionRemoved = fileManager.removeAction(actionId);
+    int keybindingsRemoved = fileManager.removeKeybindingsForAction(actionId);
+
+    if (actionRemoved) {
+      fileManager.writeSettings();
+      std::cout << "Action '" << actionId << "' removed successfully." << std::endl;
+      
+      if (keybindingsRemoved > 0) {
+        std::cout << "Removed " << keybindingsRemoved << " associated keybinding(s)." << std::endl;
+      }
+    } else {
+      std::cerr << "Error: Failed to remove action '" << actionId << "'." << std::endl;
+    }
   }
 };
 
