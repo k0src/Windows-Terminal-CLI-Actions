@@ -426,6 +426,7 @@ private:
     commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
     commands["add-action"] = [this](const std::vector<std::string> &args) { addActionCommand(args); };
     commands["remove-action"] = [this](const std::vector<std::string> &args) { removeActionCommand(args); };
+    commands["launch-mode"] = [this](const std::vector<std::string> &args) { launchModeCommand(args); };
   }
 
   void helpCommand(const std::vector<std::string> &args) {
@@ -724,7 +725,7 @@ private:
     }
 
     std::string actionId = args[0];
-    
+
     if (!fileManager.actionIdExists(actionId)) {
       std::cerr << "Error: Action ID '" << actionId << "' not found." << std::endl;
       return;
@@ -743,6 +744,38 @@ private:
     } else {
       std::cerr << "Error: Failed to remove action '" << actionId << "'." << std::endl;
     }
+  }
+
+  void launchModeCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta launch-mode <mode>" << std::endl;
+      std::cout << "Available modes:" << std::endl;
+      std::cout << "  default         - Launch in default window mode" << std::endl;
+      std::cout << "  maximized       - Launch maximized" << std::endl;
+      std::cout << "  fullscreen      - Launch in fullscreen mode" << std::endl;
+      std::cout << "  focus           - Launch in default mode with focus enabled" << std::endl;
+      std::cout << "  maximizedFocus  - Launch maximized with focus enabled" << std::endl;
+      std::cout << "Example: wta launch-mode maximized" << std::endl;
+      return;
+    }
+
+    std::string mode = args[0];
+    
+    if (mode != "default" && mode != "maximized" && mode != "fullscreen" && 
+        mode != "focus" && mode != "maximizedFocus") {
+      std::cerr << "Error: Invalid launch mode '" << mode << "'." << std::endl;
+      std::cout << "Valid modes: default, maximized, fullscreen, focus, maximizedFocus" << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    
+    settings["launchMode"] = mode;
+    
+    fileManager.writeSettings();
+    
+    std::cout << "Launch mode set to '" << mode << "' successfully." << std::endl;
+    std::cout << "Note: Changes will take effect the next time Windows Terminal is launched." << std::endl;
   }
 };
 
