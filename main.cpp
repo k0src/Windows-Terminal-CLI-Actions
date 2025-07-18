@@ -421,13 +421,14 @@ public:
 private:
   void registerCommands() {
     commands["help"] = [this](const std::vector<std::string> &args) { helpCommand(args); };
-    commands["colorscheme"] = [this](const std::vector<std::string> &args) { colorSchemeCommand(args); };
+    commands["color-scheme"] = [this](const std::vector<std::string> &args) { colorSchemeCommand(args); };
+    commands["create-scheme"] = [this](const std::vector<std::string> &args) { createSchemeCommand(args); };
     commands["font"] = [this](const std::vector<std::string> &args) { fontCommand(args); };
     commands["font-size"] = [this](const std::vector<std::string> &args) { fontSizeCommand(args); };
     commands["font-weight"] = [this](const std::vector<std::string> &args) { fontWeightCommand(args); };
     commands["cursor-shape"] = [this](const std::vector<std::string> &args) { cursorShapeCommand(args); };
     commands["cursor-height"] = [this](const std::vector<std::string> &args) { cursorHeightCommand(args); };
-    commands["createprofile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
+    commands["create-profile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
     commands["elevate"] = [this](const std::vector<std::string> &args) { elevateCommand(args); };
     commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
     commands["add-action"] = [this](const std::vector<std::string> &args) { addActionCommand(args); };
@@ -470,6 +471,52 @@ private:
     }
   }
 
+  bool isValidHexColor(const std::string &color) {
+    std::string hexColor = color;
+    
+    if (hexColor.length() > 0 && hexColor[0] == '#') {
+      hexColor = hexColor.substr(1);
+    }
+    
+    if (hexColor.length() != 6) {
+      return false;
+    }
+  
+    for (char c : hexColor) {
+      if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  std::string normalizeHexColor(const std::string &color) {
+    std::string hexColor = color;
+    
+    if (hexColor.length() > 0 && hexColor[0] == '#') {
+      hexColor = hexColor.substr(1);
+    }
+    
+    std::transform(hexColor.begin(), hexColor.end(), hexColor.begin(), ::toupper);
+    return "#" + hexColor;
+  }
+
+  std::string promptForHexColor(const std::string &fieldName) {
+    std::string input;
+    
+    while (true) {
+      std::cout << fieldName << ": ";
+      std::getline(std::cin, input);
+      
+      if (isValidHexColor(input)) {
+        return normalizeHexColor(input);
+      } else {
+        std::cerr << "Invalid hex color format. Please use 6-character hex format (e.g., #FFFFFF or FFFFFF)." << std::endl;
+      }
+    }
+  }
+
   void helpCommand(const std::vector<std::string> &args) {
     std::cout << "Commands:" << std::endl;
     for (const auto &cmd : commands) {
@@ -479,7 +526,7 @@ private:
 
   void colorSchemeCommand(const std::vector<std::string> &args) {
     if (args.size() < 1 || args.size() > 2) {
-      std::cerr << "Usage: wta colorscheme <schemeName> [profileName]" << std::endl;
+      std::cerr << "Usage: wta color-scheme <schemeName> [profileName]" << std::endl;
       return;
     }
 
@@ -500,6 +547,60 @@ private:
     settings["profiles"][profileName]["colorScheme"] = schemeName;
     fileManager.writeSettings();
     std::cout << "Color scheme updated successfully." << std::endl;
+  }
+
+  void createSchemeCommand(const std::vector<std::string> &args) {
+    if (args.size() > 0) {
+      std::cerr << "Usage: wta create-scheme" << std::endl;
+      return;
+    }
+
+    std::cout << "Creating a new color scheme..." << std::endl;
+
+    std::string schemeName;
+    std::cout << "Enter scheme name: ";
+    std::getline(std::cin, schemeName);
+    
+    if (schemeName.empty()) {
+      std::cerr << "Error: Scheme name cannot be empty." << std::endl;
+      return;
+    }
+
+    if (fileManager.colorSchemeExists(schemeName)) {
+      std::cerr << "Error: Color scheme '" << schemeName << "' already exists." << std::endl;
+      return;
+    }
+
+    json newScheme;
+    newScheme["name"] = schemeName;
+
+    std::vector<std::string> colorFields = {
+      "background", "foreground", "cursorColor", "selectionBackground",
+      "black", "red", "green", "yellow", "blue", "purple", "cyan", "white",
+      "brightBlack", "brightRed", "brightGreen", "brightYellow", 
+      "brightBlue", "brightPurple", "brightCyan", "brightWhite"
+    };
+
+    std::cout << "Enter hex colors in format #FFFFFF or FFFFFF." << std::endl;
+    std::cout << std::endl;
+
+    for (const std::string &field : colorFields) {
+      std::string color = promptForHexColor(field);
+      newScheme[field] = color;
+    }
+
+    json &settings = fileManager.getSettings();
+    
+    if (!settings.contains("schemes")) {
+      settings["schemes"] = json::array();
+    }
+    
+    settings["schemes"].push_back(newScheme);
+    fileManager.writeSettings();
+    
+    std::cout << std::endl;
+    std::cout << "Color scheme '" << schemeName << "' created successfully." << std::endl;
+    std::cout << "You can now use it with: wta color-scheme " << schemeName << " [profileName]" << std::endl;
   }
 
   void fontCommand(const std::vector<std::string> &args) {
@@ -737,7 +838,7 @@ private:
 
   void createProfileCommand(const std::vector<std::string> &args) {
     if (args.size() < 1) {
-      std::cerr << "Usage: wta createprofile <profileName>" << std::endl;
+      std::cerr << "Usage: wta create-profile <profileName>" << std::endl;
       return;
     }
 
