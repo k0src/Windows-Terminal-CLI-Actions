@@ -240,6 +240,8 @@ public:
   }
 };
 
+// 
+
 class WTAFileManager {
 private:
   json settings;
@@ -421,12 +423,49 @@ private:
     commands["help"] = [this](const std::vector<std::string> &args) { helpCommand(args); };
     commands["colorscheme"] = [this](const std::vector<std::string> &args) { colorSchemeCommand(args); };
     commands["font"] = [this](const std::vector<std::string> &args) { fontCommand(args); };
+    commands["font-size"] = [this](const std::vector<std::string> &args) { fontSizeCommand(args); };
+    commands["font-weight"] = [this](const std::vector<std::string> &args) { fontWeightCommand(args); };
     commands["createprofile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
     commands["elevate"] = [this](const std::vector<std::string> &args) { elevateCommand(args); };
     commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
     commands["add-action"] = [this](const std::vector<std::string> &args) { addActionCommand(args); };
     commands["remove-action"] = [this](const std::vector<std::string> &args) { removeActionCommand(args); };
     commands["launch-mode"] = [this](const std::vector<std::string> &args) { launchModeCommand(args); };
+  }
+
+  bool validateAndSetFontWeight(const std::string &weight, json &settings, const std::string &profileName) {
+    std::vector<std::string> validWeights = {
+      "normal", "thin", "extra-light", "light", "semi-light", 
+      "medium", "semi-bold", "bold", "extra-bold", "black", "extra-black"
+    };
+    
+    bool isValidWeight = false;
+    for (const auto& validWeight : validWeights) {
+      if (weight == validWeight) {
+        isValidWeight = true;
+        break;
+      }
+    }
+    
+    if (isValidWeight) {
+      settings["profiles"][profileName]["font"]["weight"] = weight;
+      return true;
+    } else {
+      try {
+        int weightValue = std::stoi(weight);
+        if (weightValue >= 1 && weightValue <= 1000) {
+          settings["profiles"][profileName]["font"]["weight"] = weightValue;
+          return true;
+        } else {
+          std::cerr << "Invalid font weight: " << weight << ". Must be 1-1000 or a valid weight name." << std::endl;
+          return false;
+        }
+      } catch (...) {
+        std::cerr << "Invalid font weight: " << weight << std::endl;
+        std::cout << "Valid weights: normal, thin, extra-light, light, semi-light, medium, semi-bold, bold, extra-bold, black, extra-black, or integer 1-1000" << std::endl;
+        return false;
+      }
+    }
   }
 
   void helpCommand(const std::vector<std::string> &args) {
@@ -462,14 +501,15 @@ private:
   }
 
   void fontCommand(const std::vector<std::string> &args) {
-    if (args.empty() || args.size() > 3) {
-      std::cerr << "Usage: wta font <fontName> [fontSize] [profileName]" << std::endl;
+    if (args.empty() || args.size() > 4) {
+      std::cerr << "Usage: wta font <fontName> [fontSize] [weight] [profileName]" << std::endl;
       return;
     }
 
     std::string fontName = args[0];
     std::string fontSize = args.size() >= 2 ? args[1] : "";
-    std::string profileName = args.size() == 3 ? args[2] : "defaults";
+    std::string weight = args.size() >= 3 ? args[2] : "";
+    std::string profileName = args.size() == 4 ? args[3] : "defaults";
 
     if (!fileManager.profileExists(profileName)) {
       std::cerr << "Profile not found: " << profileName << std::endl;
@@ -494,8 +534,67 @@ private:
       }
     }
 
+    if (!weight.empty()) {
+      if (!validateAndSetFontWeight(weight, settings, profileName)) {
+        return;
+      }
+    }
+
     fileManager.writeSettings();
     std::cout << "Font updated successfully." << std::endl;
+  }
+
+  void fontSizeCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta font-size <fontSize> [profileName]" << std::endl;
+      return;
+    }
+
+    std::string fontSize = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    try {
+      int fontSizeValue = std::stoi(fontSize);
+      if (fontSizeValue < 1) {
+        std::cerr << "Invalid font size: " << fontSize << ". Must be a positive integer." << std::endl;
+        return;
+      }
+
+      json &settings = fileManager.getSettings();
+      settings["profiles"][profileName]["font"]["size"] = fontSizeValue;
+      fileManager.writeSettings();
+      std::cout << "Font size updated successfully." << std::endl;
+    } catch (...) {
+      std::cerr << "Invalid font size: " << fontSize << ". Must be a positive integer." << std::endl;
+    }
+  }
+
+  void fontWeightCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta font-weight <weight> [profileName]" << std::endl;
+      std::cout << "Valid weights: normal, thin, extra-light, light, semi-light, medium, semi-bold, bold, extra-bold, black, extra-black, or integer 1-1000" << std::endl;
+      return;
+    }
+
+    std::string weight = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    
+    if (validateAndSetFontWeight(weight, settings, profileName)) {
+      fileManager.writeSettings();
+      std::cout << "Font weight updated successfully." << std::endl;
+    }
   }
 
   void fontInstallCommand(const std::vector<std::string> &args) {
