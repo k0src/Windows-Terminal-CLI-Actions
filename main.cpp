@@ -425,6 +425,8 @@ private:
     commands["font"] = [this](const std::vector<std::string> &args) { fontCommand(args); };
     commands["font-size"] = [this](const std::vector<std::string> &args) { fontSizeCommand(args); };
     commands["font-weight"] = [this](const std::vector<std::string> &args) { fontWeightCommand(args); };
+    commands["cursor-shape"] = [this](const std::vector<std::string> &args) { cursorShapeCommand(args); };
+    commands["cursor-height"] = [this](const std::vector<std::string> &args) { cursorHeightCommand(args); };
     commands["createprofile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
     commands["elevate"] = [this](const std::vector<std::string> &args) { elevateCommand(args); };
     commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
@@ -594,6 +596,81 @@ private:
     if (validateAndSetFontWeight(weight, settings, profileName)) {
       fileManager.writeSettings();
       std::cout << "Font weight updated successfully." << std::endl;
+    }
+  }
+
+  void cursorShapeCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta cursor-shape <cursorShape> [profileName]" << std::endl;
+      std::cout << "Valid cursor shapes: bar, vintage, underscore, filledBox, emptyBox, doubleUnderscore" << std::endl;
+      return;
+    }
+
+    std::string cursorShape = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    std::vector<std::string> validCursorShapes = {
+      "bar", "vintage", "underscore", "filledBox", "emptyBox", "doubleUnderscore"
+    };
+    
+    bool isValidShape = false;
+    for (const auto& validShape : validCursorShapes) {
+      if (cursorShape == validShape) {
+        isValidShape = true;
+        break;
+      }
+    }
+    
+    if (!isValidShape) {
+      std::cerr << "Invalid cursor shape: " << cursorShape << std::endl;
+      std::cout << "Valid cursor shapes: bar, vintage, underscore, filledBox, emptyBox, doubleUnderscore" << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["profiles"][profileName]["cursorShape"] = cursorShape;
+    fileManager.writeSettings();
+    std::cout << "Cursor shape updated successfully." << std::endl;
+  }
+
+  void cursorHeightCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta cursor-height <height> [profileName]" << std::endl;
+      std::cout << "Height must be an integer from 1-100 (only works with vintage cursor shape)" << std::endl;
+      return;
+    }
+
+    std::string heightStr = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    try {
+      int height = std::stoi(heightStr);
+      if (height < 1 || height > 100) {
+        std::cerr << "Invalid cursor height: " << heightStr << ". Must be between 1 and 100." << std::endl;
+        return;
+      }
+
+      json &settings = fileManager.getSettings();
+      settings["profiles"][profileName]["cursorHeight"] = height;
+      fileManager.writeSettings();
+      std::cout << "Cursor height updated successfully." << std::endl;
+      
+      if (settings["profiles"][profileName].contains("cursorShape") && 
+          settings["profiles"][profileName]["cursorShape"] != "vintage") {
+        std::cout << "Note: Cursor height only affects the 'vintage' cursor shape." << std::endl;
+      }
+    } catch (...) {
+      std::cerr << "Invalid cursor height: " << heightStr << ". Must be an integer between 1 and 100." << std::endl;
     }
   }
 
