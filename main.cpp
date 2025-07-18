@@ -240,8 +240,6 @@ public:
   }
 };
 
-// 
-
 class WTAFileManager {
 private:
   json settings;
@@ -428,6 +426,8 @@ private:
     commands["font-weight"] = [this](const std::vector<std::string> &args) { fontWeightCommand(args); };
     commands["cursor-shape"] = [this](const std::vector<std::string> &args) { cursorShapeCommand(args); };
     commands["cursor-height"] = [this](const std::vector<std::string> &args) { cursorHeightCommand(args); };
+    commands["force-full-repaint"] = [this](const std::vector<std::string> &args) { forceFullRepaintCommand(args); };
+    commands["software-rendering"] = [this](const std::vector<std::string> &args) { softwareRenderingCommand(args); };
     commands["create-profile"] = [this](const std::vector<std::string> &args) { createProfileCommand(args); };
     commands["elevate"] = [this](const std::vector<std::string> &args) { elevateCommand(args); };
     commands["install-font"] = [this](const std::vector<std::string> &args) { fontInstallCommand(args); };
@@ -773,6 +773,58 @@ private:
     } catch (...) {
       std::cerr << "Invalid cursor height: " << heightStr << ". Must be an integer between 1 and 100." << std::endl;
     }
+  }
+
+  void forceFullRepaintCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta force-full-repaint <true|false> [profileName]" << std::endl;
+      std::cout << "Controls whether the terminal redraws the entire screen each frame." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["profiles"][profileName]["experimental.rendering.forceFullRepaint"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Force full repaint set to " << option << " successfully." << std::endl;
+  }
+
+  void softwareRenderingCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta software-rendering <true|false> [profileName]" << std::endl;
+      std::cout << "Controls whether the terminal uses software rendering (WARP) instead of hardware rendering." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["profiles"][profileName]["experimental.rendering.software"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Software rendering set to " << option << " successfully." << std::endl;
   }
 
   void fontInstallCommand(const std::vector<std::string> &args) {
