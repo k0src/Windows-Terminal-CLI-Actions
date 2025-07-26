@@ -318,6 +318,18 @@ public:
     return false;
   }
 
+  bool themeExists(const std::string &themeName) {
+    if (!settings.contains("themes")) {
+      return false;
+    }
+    for (const auto &theme : settings["themes"]) {
+      if (theme["name"] == themeName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool profileNameExists(const std::string &profileName) {
     for (const auto &profile : settings["profiles"]["list"]) {
       if (profile["name"] == profileName) {
@@ -421,6 +433,8 @@ private:
     commands["help"] = [this](const std::vector<std::string> &args) { helpCommand(args); };
     commands["color-scheme"] = [this](const std::vector<std::string> &args) { colorSchemeCommand(args); };
     commands["create-scheme"] = [this](const std::vector<std::string> &args) { createSchemeCommand(args); };
+    commands["theme"] = [this](const std::vector<std::string> &args) { themeCommand(args); };
+    commands["create-theme"] = [this](const std::vector<std::string> &args) { createThemeCommand(args); };
     commands["font"] = [this](const std::vector<std::string> &args) { fontCommand(args); };
     commands["font-size"] = [this](const std::vector<std::string> &args) { fontSizeCommand(args); };
     commands["font-weight"] = [this](const std::vector<std::string> &args) { fontWeightCommand(args); };
@@ -453,7 +467,6 @@ private:
     commands["force-vt"] = [this](const std::vector<std::string> &args) { forceVtCommand(args); };
     commands["right-click-context-menu"] = [this](const std::vector<std::string> &args) { rightClickContextMenuCommand(args); };
     commands["search-web-url"] = [this](const std::vector<std::string> &args) { searchWebUrlCommand(args); };
-    commands["test"] = [this](const std::vector<std::string> &args) { testCommand(args); };
     commands["language"] = [this](const std::vector<std::string> &args) { languageCommand(args); };
     commands["theme"] = [this](const std::vector<std::string> &args) { themeCommand(args); };
     commands["always-show-tabs"] = [this](const std::vector<std::string> &args) { alwaysShowTabsCommand(args); };
@@ -465,6 +478,11 @@ private:
     commands["tab-width-mode"] = [this](const std::vector<std::string> &args) { tabWidthModeCommand(args); };
     commands["disable-animations"] = [this](const std::vector<std::string> &args) { disableAnimationsCommand(args); };
     commands["confirm-close-all-tabs"] = [this](const std::vector<std::string> &args) { confirmCloseAllTabsCommand(args); };
+    commands["icon"] = [this](const std::vector<std::string> &args) { iconCommand(args); };
+    commands["tab-title"] = [this](const std::vector<std::string> &args) { tabTitleCommand(args); };
+    commands["starting-directory"] = [this](const std::vector<std::string> &args) { startingDirectoryCommand(args); };
+    commands["profile-name"] = [this](const std::vector<std::string> &args) { profileNameCommand(args); };
+    commands["commandline"] = [this](const std::vector<std::string> &args) { commandlineCommand(args); };
   }
 
   bool validateAndSetFontWeight(const std::string &weight, json &settings, const std::string &profileName) {
@@ -549,10 +567,282 @@ private:
   }
 
   void helpCommand(const std::vector<std::string> &args) {
-    std::cout << "Commands:" << std::endl;
-    for (const auto &cmd : commands) {
-      std::cout << " - " << cmd.first << std::endl;
+    if (args.empty()) {
+      std::cout << "Windows Terminal Actions (WTA) - Command Line Tool" << std::endl;
+      std::cout << "=================================================" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Available commands:" << std::endl;
+      std::cout << std::endl;
+
+      // Group commands by category for better organization
+      std::cout << "Font Management:" << std::endl;
+      std::cout << "  font, font-size, font-weight, install-font" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Color & Themes:" << std::endl;
+      std::cout << "  color-scheme, create-scheme, theme, create-theme" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Cursor Settings:" << std::endl;
+      std::cout << "  cursor-shape, cursor-height" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Profile Management:" << std::endl;
+      std::cout << "  create-profile, elevate, icon, tab-title, starting-directory" << std::endl;
+      std::cout << "  profile-name, commandline" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Terminal Behavior:" << std::endl;
+      std::cout << "  copy-on-select, copy-formatting, trim-block-selection, trim-paste" << std::endl;
+      std::cout << "  word-delimiters, snap-to-grid, focus-follow-mouse, detect-urls" << std::endl;
+      std::cout << "  large-paste-warning, multiline-paste-warning" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Window & Tab Settings:" << std::endl;
+      std::cout << "  launch-mode, always-show-tabs, new-tab-position, show-tabs-in-titlebar" << std::endl;
+      std::cout << "  use-acrylic-in-tab-row, show-terminal-title-in-titlebar, always-on-top" << std::endl;
+      std::cout << "  tab-width-mode, disable-animations, confirm-close-all-tabs" << std::endl;
+      std::cout << "  auto-hide-window, minimize-to-notification, always-show-notification" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Advanced Features:" << std::endl;
+      std::cout << "  tab-switcher-mode, use-tab-switcher, enable-unfocused-acrylic" << std::endl;
+      std::cout << "  force-full-repaint, software-rendering, force-vt" << std::endl;
+      std::cout << "  right-click-context-menu, search-web-url, language" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Actions & Keybindings:" << std::endl;
+      std::cout << "  add-action, remove-action" << std::endl;
+      std::cout << std::endl;
+
+      std::cout << "Use 'wta help <command>' for detailed information about a specific command." << std::endl;
+      std::cout << "Example: wta help font" << std::endl;
+    } else {
+      std::string commandName = args[0];
+      showDetailedHelp(commandName);
     }
+  }
+
+  void showDetailedHelp(const std::string &commandName) {
+    if (commands.find(commandName) == commands.end()) {
+      std::cerr << "Unknown command: " << commandName << std::endl;
+      std::cout << "Use 'wta help' to see all available commands." << std::endl;
+      return;
+    }
+
+    std::cout << "Command: " << commandName << std::endl;
+    std::cout << std::string(commandName.length() + 9, '=') << std::endl;
+    std::cout << std::endl;
+
+    if (commandName == "font") {
+      std::cout << "Usage: wta font <fontName> [fontSize] [weight] [profileName]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets the font face, size, and weight for a terminal profile." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  fontName    - Name of the font (must be installed)" << std::endl;
+      std::cout << "  fontSize    - Font size (optional, positive integer)" << std::endl;
+      std::cout << "  weight      - Font weight (optional, see font-weight command)" << std::endl;
+      std::cout << "  profileName - Target profile (optional, defaults to 'defaults')" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta font \"Cascadia Code\"" << std::endl;
+      std::cout << "  wta font \"Fira Code\" 14 bold PowerShell" << std::endl;
+    }
+    else if (commandName == "font-size") {
+      std::cout << "Usage: wta font-size <fontSize> [profileName]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets the font size for a terminal profile." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  fontSize    - Font size (positive integer)" << std::endl;
+      std::cout << "  profileName - Target profile (optional, defaults to 'defaults')" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta font-size 12" << std::endl;
+      std::cout << "  wta font-size 16 PowerShell" << std::endl;
+    }
+    else if (commandName == "font-weight") {
+      std::cout << "Usage: wta font-weight <weight> [profileName]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets the font weight for a terminal profile." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  weight      - Font weight (see valid values below)" << std::endl;
+      std::cout << "  profileName - Target profile (optional, defaults to 'defaults')" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Valid weights:" << std::endl;
+      std::cout << "  normal, thin, extra-light, light, semi-light, medium," << std::endl;
+      std::cout << "  semi-bold, bold, extra-bold, black, extra-black" << std::endl;
+      std::cout << "  OR integer value from 1-1000" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta font-weight bold" << std::endl;
+      std::cout << "  wta font-weight 600 PowerShell" << std::endl;
+    }
+    else if (commandName == "install-font") {
+      std::cout << "Usage: wta install-font <fontName|help>" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Downloads and installs Nerd Fonts from the internet." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  fontName - Name of the Nerd Font to install" << std::endl;
+      std::cout << "  help     - Shows list of available fonts" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Note: Font installation may require administrator privileges." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta install-font help" << std::endl;
+      std::cout << "  wta install-font \"Fira Code\"" << std::endl;
+    }
+    else if (commandName == "color-scheme") {
+      std::cout << "Usage: wta color-scheme <schemeName> [profileName]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Applies a color scheme to a terminal profile." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  schemeName  - Name of the color scheme" << std::endl;
+      std::cout << "  profileName - Target profile (optional, defaults to 'defaults')" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta color-scheme \"One Half Dark\"" << std::endl;
+      std::cout << "  wta color-scheme Solarized PowerShell" << std::endl;
+    }
+    else if (commandName == "create-scheme") {
+      std::cout << "Usage: wta create-scheme" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Interactively creates a new color scheme with custom colors." << std::endl;
+      std::cout << std::endl;
+      std::cout << "This command will prompt you to enter:" << std::endl;
+      std::cout << "  - Scheme name" << std::endl;
+      std::cout << "  - Background, foreground, cursor, and selection colors" << std::endl;
+      std::cout << "  - 16 terminal colors (black, red, green, yellow, blue, purple, cyan, white)" << std::endl;
+      std::cout << "  - Bright variants of the 8 basic colors" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Colors should be in hex format (#FFFFFF or FFFFFF)." << std::endl;
+    }
+    else if (commandName == "theme") {
+      std::cout << "Usage: wta theme <themeName>" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets the Windows Terminal theme." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  themeName - Name of the theme" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Built-in themes: system, dark, light" << std::endl;
+      std::cout << "Custom themes can be created with 'wta create-theme'" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta theme dark" << std::endl;
+      std::cout << "  wta theme \"My Custom Theme\"" << std::endl;
+    }
+    else if (commandName == "create-theme") {
+      std::cout << "Usage: wta create-theme" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Interactively creates a new Windows Terminal theme." << std::endl;
+      std::cout << std::endl;
+      std::cout << "This command will prompt you to configure:" << std::endl;
+      std::cout << "  - Theme name" << std::endl;
+      std::cout << "  - Window settings (application theme, Mica effect, rainbow frame)" << std::endl;
+      std::cout << "  - Tab row appearance (background colors)" << std::endl;
+      std::cout << "  - Tab appearance (background colors, close button behavior)" << std::endl;
+    }
+    else if (commandName == "cursor-shape") {
+      std::cout << "Usage: wta cursor-shape <cursorShape> [profileName]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets the cursor shape for a terminal profile." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  cursorShape - Shape of the cursor" << std::endl;
+      std::cout << "  profileName - Target profile (optional, defaults to 'defaults')" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Valid cursor shapes:" << std::endl;
+      std::cout << "  bar, vintage, underscore, filledBox, emptyBox, doubleUnderscore" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta cursor-shape bar" << std::endl;
+      std::cout << "  wta cursor-shape filledBox PowerShell" << std::endl;
+    }
+    else if (commandName == "cursor-height") {
+      std::cout << "Usage: wta cursor-height <height> [profileName]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets the cursor height for vintage cursor shapes." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  height      - Height percentage (1-100)" << std::endl;
+      std::cout << "  profileName - Target profile (optional, defaults to 'defaults')" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Note: This setting only affects the 'vintage' cursor shape." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta cursor-height 25" << std::endl;
+      std::cout << "  wta cursor-height 50 PowerShell" << std::endl;
+    }
+    else if (commandName == "launch-mode") {
+      std::cout << "Usage: wta launch-mode <mode>" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Sets how Windows Terminal launches." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Available modes:" << std::endl;
+      std::cout << "  default         - Launch in default window mode" << std::endl;
+      std::cout << "  maximized       - Launch maximized" << std::endl;
+      std::cout << "  fullscreen      - Launch in fullscreen mode" << std::endl;
+      std::cout << "  focus           - Launch in default mode with focus enabled" << std::endl;
+      std::cout << "  maximizedFocus  - Launch maximized with focus enabled" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Note: Changes take effect when Windows Terminal is restarted." << std::endl;
+    }
+    else if (commandName == "create-profile") {
+      std::cout << "Usage: wta create-profile <profileName>" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Creates a new terminal profile with default settings." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  profileName - Name for the new profile" << std::endl;
+      std::cout << std::endl;
+      std::cout << "The new profile will use default settings that can be" << std::endl;
+      std::cout << "customized with other WTA commands." << std::endl;
+    }
+    else if (commandName == "add-action") {
+      std::cout << "Usage: wta add-action <command> <id> [keys] [name] [options...]" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Adds a custom action with optional keybinding to Windows Terminal." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  command - The action command to execute" << std::endl;
+      std::cout << "  id      - Unique identifier for the action" << std::endl;
+      std::cout << "  keys    - Key combination (optional)" << std::endl;
+      std::cout << "  name    - Display name (optional)" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Additional options:" << std::endl;
+      std::cout << "  --action <action>        - Specific action type" << std::endl;
+      std::cout << "  --commandline <command>  - Command line to execute" << std::endl;
+      std::cout << "  --profile <profile>      - Target profile" << std::endl;
+      std::cout << "  --directory <path>       - Starting directory" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta add-action closeWindow User.MyClose alt+f4" << std::endl;
+      std::cout << "  wta add-action newTab User.PowerShell ctrl+shift+p --profile PowerShell" << std::endl;
+    }
+    else if (commandName == "remove-action") {
+      std::cout << "Usage: wta remove-action <actionId>" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Removes a custom action and its associated keybindings." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Parameters:" << std::endl;
+      std::cout << "  actionId - The unique identifier of the action to remove" << std::endl;
+    }
+    else {
+      std::cout << "This command modifies Windows Terminal settings." << std::endl;
+      std::cout << std::endl;
+      std::cout << "For usage information, run the command without arguments" << std::endl;
+      std::cout << "to see the specific syntax and available options." << std::endl;
+      std::cout << std::endl;
+      std::cout << "Example: wta " << commandName << std::endl;
+    }
+    
+    std::cout << std::endl;
+    std::cout << "Use 'wta help' to see all available commands." << std::endl;
   }
 
   void colorSchemeCommand(const std::vector<std::string> &args) {
@@ -1498,6 +1788,482 @@ private:
     settings["searchWebDefaultQueryUrl"] = url;
     fileManager.writeSettings();
     std::cout << "Search web URL set successfully." << std::endl;
+  }
+
+  void languageCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta language <language-tag>" << std::endl;
+      std::cout << "Sets the application's preferred language override." << std::endl;
+      std::cout << "Example: wta language \"en-US\" or wta language \"fr-FR\"" << std::endl;
+      return;
+    }
+
+    std::string language = args[0];
+    json &settings = fileManager.getSettings();
+    settings["language"] = language;
+    fileManager.writeSettings();
+    std::cout << "Language set to " << language << " successfully." << std::endl;
+  }
+
+  void themeCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta theme <themeName>" << std::endl;
+      std::cout << "Built-in themes: system, dark, light" << std::endl;
+      std::cout << "Use 'wta create-theme' to create a custom theme." << std::endl;
+      return;
+    }
+
+    std::string themeName = args[0];
+
+    if (themeName != "system" && themeName != "dark" && themeName != "light") {
+      if (!fileManager.themeExists(themeName)) {
+        std::cerr << "Theme not found: " << themeName << std::endl;
+        std::cout << "Available built-in themes: system, dark, light" << std::endl;
+        std::cout << "Use 'wta create-theme' to create a custom theme." << std::endl;
+        return;
+      }
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["theme"] = themeName;
+    fileManager.writeSettings();
+    std::cout << "Theme set to '" << themeName << "' successfully." << std::endl;
+  }
+
+  void createThemeCommand(const std::vector<std::string> &args) {
+    if (args.size() > 0) {
+      std::cerr << "Usage: wta create-theme" << std::endl;
+      return;
+    }
+
+    std::cout << "Creating a new theme..." << std::endl;
+
+    std::string themeName;
+    std::cout << "Enter theme name: ";
+    std::getline(std::cin, themeName);
+    
+    if (themeName.empty()) {
+      std::cerr << "Error: Theme name cannot be empty." << std::endl;
+      return;
+    }
+
+    if (themeName == "system" || themeName == "dark" || themeName == "light") {
+      std::cerr << "Error: Theme names 'system', 'dark', and 'light' are reserved." << std::endl;
+      return;
+    }
+
+    if (fileManager.themeExists(themeName)) {
+      std::cerr << "Error: Theme '" << themeName << "' already exists." << std::endl;
+      return;
+    }
+
+    json newTheme;
+    newTheme["name"] = themeName;
+
+    std::cout << "Configure theme properties (press Enter to skip optional settings):" << std::endl;
+    std::cout << std::endl;
+
+    // Window settings
+    std::cout << "=== Window Settings ===" << std::endl;
+    std::string applicationTheme;
+    std::cout << "Application theme (system/dark/light) [default: dark]: ";
+    std::getline(std::cin, applicationTheme);
+    if (applicationTheme.empty()) applicationTheme = "dark";
+    
+    std::string useMica;
+    std::cout << "Use Mica effect (true/false) [default: false]: ";
+    std::getline(std::cin, useMica);
+    if (useMica.empty()) useMica = "false";
+
+    std::string rainbowFrame;
+    std::cout << "Rainbow frame (experimental, true/false) [default: false]: ";
+    std::getline(std::cin, rainbowFrame);
+    if (rainbowFrame.empty()) rainbowFrame = "false";
+
+    newTheme["window"]["applicationTheme"] = applicationTheme;
+    newTheme["window"]["useMica"] = (useMica == "true");
+    newTheme["window"]["experimental.rainbowFrame"] = (rainbowFrame == "true");
+
+    // Tab row settings
+    std::cout << std::endl;
+    std::cout << "=== Tab Row Settings ===" << std::endl;
+    std::string tabRowBackground;
+    std::cout << "Tab row background color (hex color or 'terminalBackground') [default: #333333FF]: ";
+    std::getline(std::cin, tabRowBackground);
+    if (tabRowBackground.empty()) tabRowBackground = "#333333FF";
+
+    std::string tabRowUnfocusedBackground;
+    std::cout << "Tab row unfocused background color [default: #333333FF]: ";
+    std::getline(std::cin, tabRowUnfocusedBackground);
+    if (tabRowUnfocusedBackground.empty()) tabRowUnfocusedBackground = "#333333FF";
+
+    newTheme["tabRow"]["background"] = tabRowBackground;
+    newTheme["tabRow"]["unfocusedBackground"] = tabRowUnfocusedBackground;
+
+    // Tab settings
+    std::cout << std::endl;
+    std::cout << "=== Tab Settings ===" << std::endl;
+    std::string tabBackground;
+    std::cout << "Active tab background ('terminalBackground' or hex color) [default: terminalBackground]: ";
+    std::getline(std::cin, tabBackground);
+    if (tabBackground.empty()) tabBackground = "terminalBackground";
+
+    std::string tabUnfocusedBackground;
+    std::cout << "Inactive tab background [default: #00000000]: ";
+    std::getline(std::cin, tabUnfocusedBackground);
+    if (tabUnfocusedBackground.empty()) tabUnfocusedBackground = "#00000000";
+
+    std::string showCloseButton;
+    std::cout << "Show close button (always/hover/never/activeOnly) [default: always]: ";
+    std::getline(std::cin, showCloseButton);
+    if (showCloseButton.empty()) showCloseButton = "always";
+
+    newTheme["tab"]["background"] = tabBackground;
+    newTheme["tab"]["unfocusedBackground"] = tabUnfocusedBackground;
+    newTheme["tab"]["showCloseButton"] = showCloseButton;
+
+    json &settings = fileManager.getSettings();
+    
+    if (!settings.contains("themes")) {
+      settings["themes"] = json::array();
+    }
+    
+    settings["themes"].push_back(newTheme);
+    fileManager.writeSettings();
+    
+    std::cout << std::endl;
+    std::cout << "Theme '" << themeName << "' created successfully." << std::endl;
+    std::cout << "You can now use it with: wta theme " << themeName << std::endl;
+  }
+
+  void alwaysShowTabsCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta always-show-tabs <true|false>" << std::endl;
+      std::cout << "When true, tabs are always displayed." << std::endl;
+      std::cout << "Note: Changing this setting requires starting a new terminal instance." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["alwaysShowTabs"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Always show tabs set to " << option << " successfully." << std::endl;
+    std::cout << "Note: You need to restart Windows Terminal for this change to take effect." << std::endl;
+  }
+
+  void newTabPositionCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta new-tab-position <afterLastTab|afterCurrentTab>" << std::endl;
+      std::cout << "Specifies where new tabs appear in the tab row." << std::endl;
+      return;
+    }
+
+    std::string position = args[0];
+    if (position != "afterLastTab" && position != "afterCurrentTab") {
+      std::cerr << "Invalid option: " << position << ". Use 'afterLastTab' or 'afterCurrentTab'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["newTabPosition"] = position;
+    fileManager.writeSettings();
+    std::cout << "New tab position set to " << position << " successfully." << std::endl;
+  }
+
+  void showTabsInTitlebarCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta show-tabs-in-titlebar <true|false>" << std::endl;
+      std::cout << "When true, tabs are moved into the title bar and the title bar disappears." << std::endl;
+      std::cout << "Note: Changing this setting requires starting a new terminal instance." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["showTabsInTitlebar"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Show tabs in titlebar set to " << option << " successfully." << std::endl;
+    std::cout << "Note: You need to restart Windows Terminal for this change to take effect." << std::endl;
+  }
+
+  void useAcrylicInTabRowCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta use-acrylic-in-tab-row <true|false>" << std::endl;
+      std::cout << "When true, the tab row is given an acrylic background at 50% opacity." << std::endl;
+      std::cout << "Note: Changing this setting requires starting a new terminal instance." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["useAcrylicInTabRow"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Use acrylic in tab row set to " << option << " successfully." << std::endl;
+    std::cout << "Note: You need to restart Windows Terminal for this change to take effect." << std::endl;
+  }
+
+  void showTerminalTitleInTitlebarCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta show-terminal-title-in-titlebar <true|false>" << std::endl;
+      std::cout << "When true, the title bar displays the title of the selected tab." << std::endl;
+      std::cout << "Note: Changing this setting requires starting a new terminal instance." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["showTerminalTitleInTitlebar"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Show terminal title in titlebar set to " << option << " successfully." << std::endl;
+    std::cout << "Note: You need to restart Windows Terminal for this change to take effect." << std::endl;
+  }
+
+  void alwaysOnTopCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta always-on-top <true|false>" << std::endl;
+      std::cout << "When true, Windows Terminal windows will launch on top of all other windows." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["alwaysOnTop"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Always on top set to " << option << " successfully." << std::endl;
+  }
+
+  void tabWidthModeCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta tab-width-mode <equal|titleLength|compact>" << std::endl;
+      std::cout << "Sets the width of the tabs." << std::endl;
+      std::cout << "  equal - each tab the same width" << std::endl;
+      std::cout << "  titleLength - each tab sized to the length of its title" << std::endl;
+      std::cout << "  compact - inactive tabs shrink to icon width, active tab gets more space" << std::endl;
+      return;
+    }
+
+    std::string mode = args[0];
+    if (mode != "equal" && mode != "titleLength" && mode != "compact") {
+      std::cerr << "Invalid option: " << mode << ". Use 'equal', 'titleLength', or 'compact'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["tabWidthMode"] = mode;
+    fileManager.writeSettings();
+    std::cout << "Tab width mode set to " << mode << " successfully." << std::endl;
+  }
+
+  void disableAnimationsCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta disable-animations <true|false>" << std::endl;
+      std::cout << "When true, disables visual animations across the application." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["disableAnimations"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Disable animations set to " << option << " successfully." << std::endl;
+  }
+
+  void confirmCloseAllTabsCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta confirm-close-all-tabs <true|false>" << std::endl;
+      std::cout << "When true, closing a window with multiple tabs open will require confirmation." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["confirmCloseAllTabs"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Confirm close all tabs set to " << option << " successfully." << std::endl;
+  }
+
+  void iconCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta icon <icon-path-or-emoji> [profileName]" << std::endl;
+      std::cout << "Sets the icon that displays within the tab, dropdown menu, jumplist, and tab switcher." << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta icon \"🐧\" defaults" << std::endl;
+      std::cout << "  wta icon \"ms-appdata:///roaming/ubuntu.ico\" Ubuntu" << std::endl;
+      std::cout << "  wta icon \"C:\\\\path\\\\to\\\\icon.ico\"" << std::endl;
+      return;
+    }
+
+    std::string icon = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["profiles"][profileName]["icon"] = icon;
+    fileManager.writeSettings();
+    std::cout << "Icon set successfully for profile '" << profileName << "'." << std::endl;
+  }
+
+  void tabTitleCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta tab-title <title|null> [profileName]" << std::endl;
+      std::cout << "Sets the title to pass to the shell on startup. Use 'null' to unset." << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta tab-title \"My PowerShell\" defaults" << std::endl;
+      std::cout << "  wta tab-title null Ubuntu" << std::endl;
+      return;
+    }
+
+    std::string title = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    if (title == "null") {
+      settings["profiles"][profileName]["tabTitle"] = nullptr;
+      std::cout << "Tab title unset for profile '" << profileName << "'." << std::endl;
+    } else {
+      settings["profiles"][profileName]["tabTitle"] = title;
+      std::cout << "Tab title set to '" << title << "' for profile '" << profileName << "'." << std::endl;
+    }
+    fileManager.writeSettings();
+  }
+
+  void startingDirectoryCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta starting-directory <directory-path|null> [profileName]" << std::endl;
+      std::cout << "Sets the directory the shell starts in when it is loaded. Use 'null' to unset." << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta starting-directory \"%USERPROFILE%\\\\Documents\" defaults" << std::endl;
+      std::cout << "  wta starting-directory \"C:\\\\Projects\" PowerShell" << std::endl;
+      std::cout << "  wta starting-directory null Ubuntu" << std::endl;
+      return;
+    }
+
+    std::string directory = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    if (directory == "null") {
+      settings["profiles"][profileName]["startingDirectory"] = nullptr;
+      std::cout << "Starting directory unset for profile '" << profileName << "'." << std::endl;
+    } else {
+      settings["profiles"][profileName]["startingDirectory"] = directory;
+      std::cout << "Starting directory set to '" << directory << "' for profile '" << profileName << "'." << std::endl;
+    }
+    fileManager.writeSettings();
+  }
+
+  void profileNameCommand(const std::vector<std::string> &args) {
+    if (args.size() != 2) {
+      std::cerr << "Usage: wta profile-name <new-name> <current-profile-name>" << std::endl;
+      std::cout << "Sets the name of the profile that will be displayed in the dropdown menu." << std::endl;
+      std::cout << "Note: This command requires specifying the current profile name to identify which profile to rename." << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta profile-name \"My PowerShell\" \"Windows PowerShell\"" << std::endl;
+      std::cout << "  wta profile-name \"Dev Command Prompt\" \"Command Prompt\"" << std::endl;
+      return;
+    }
+
+    std::string newName = args[0];
+    std::string currentProfileName = args[1];
+
+    if (currentProfileName == "defaults") {
+      std::cerr << "Cannot rename the 'defaults' profile. The 'defaults' profile contains default settings for all profiles." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    bool profileFound = false;
+    
+    for (auto &profile : settings["profiles"]["list"]) {
+      if (profile.contains("name") && profile["name"] == currentProfileName) {
+        profile["name"] = newName;
+        profileFound = true;
+        break;
+      }
+    }
+
+    if (!profileFound) {
+      std::cerr << "Profile '" << currentProfileName << "' not found in profile list." << std::endl;
+      return;
+    }
+
+    fileManager.writeSettings();
+    std::cout << "Profile renamed from '" << currentProfileName << "' to '" << newName << "' successfully." << std::endl;
+  }
+
+  void commandlineCommand(const std::vector<std::string> &args) {
+    if (args.size() < 1 || args.size() > 2) {
+      std::cerr << "Usage: wta commandline <executable-command> [profileName]" << std::endl;
+      std::cout << "Sets the executable used in the profile." << std::endl;
+      std::cout << "Examples:" << std::endl;
+      std::cout << "  wta commandline \"powershell.exe\" defaults" << std::endl;
+      std::cout << "  wta commandline \"cmd.exe /k path\\\\to\\\\script.bat\" \"Command Prompt\"" << std::endl;
+      std::cout << "  wta commandline \"wsl.exe -d Ubuntu\" Ubuntu" << std::endl;
+      return;
+    }
+
+    std::string commandline = args[0];
+    std::string profileName = args.size() == 2 ? args[1] : "defaults";
+
+    if (!fileManager.profileExists(profileName)) {
+      std::cerr << "Profile not found: " << profileName << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["profiles"][profileName]["commandline"] = commandline;
+    fileManager.writeSettings();
+    std::cout << "Command line set to '" << commandline << "' for profile '" << profileName << "'." << std::endl;
   }
 };
 
