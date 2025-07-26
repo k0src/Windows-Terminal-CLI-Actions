@@ -434,6 +434,37 @@ private:
     commands["add-action"] = [this](const std::vector<std::string> &args) { addActionCommand(args); };
     commands["remove-action"] = [this](const std::vector<std::string> &args) { removeActionCommand(args); };
     commands["launch-mode"] = [this](const std::vector<std::string> &args) { launchModeCommand(args); };
+    commands["enable-unfocused-acrylic"] = [this](const std::vector<std::string> &args) { enableUnfocusedAcrylicCommand(args); };
+    commands["copy-on-select"] = [this](const std::vector<std::string> &args) { copyOnSelectCommand(args); };
+    commands["copy-formatting"] = [this](const std::vector<std::string> &args) { copyFormattingCommand(args); };
+    commands["trim-block-selection"] = [this](const std::vector<std::string> &args) { trimBlockSelectionCommand(args); };
+    commands["trim-paste"] = [this](const std::vector<std::string> &args) { trimPasteCommand(args); };
+    commands["word-delimiters"] = [this](const std::vector<std::string> &args) { wordDelimitersCommand(args); };
+    commands["snap-to-grid"] = [this](const std::vector<std::string> &args) { snapToGridCommand(args); };
+    commands["minimize-to-notification"] = [this](const std::vector<std::string> &args) { minimizeToNotificationCommand(args); };
+    commands["always-show-notification"] = [this](const std::vector<std::string> &args) { alwaysShowNotificationCommand(args); };
+    commands["tab-switcher-mode"] = [this](const std::vector<std::string> &args) { tabSwitcherModeCommand(args); };
+    commands["use-tab-switcher"] = [this](const std::vector<std::string> &args) { useTabSwitcherCommand(args); };
+    commands["auto-hide-window"] = [this](const std::vector<std::string> &args) { autoHideWindowCommand(args); };
+    commands["focus-follow-mouse"] = [this](const std::vector<std::string> &args) { focusFollowMouseCommand(args); };
+    commands["detect-urls"] = [this](const std::vector<std::string> &args) { detectUrlsCommand(args); };
+    commands["large-paste-warning"] = [this](const std::vector<std::string> &args) { largePasteWarningCommand(args); };
+    commands["multiline-paste-warning"] = [this](const std::vector<std::string> &args) { multiLinePasteWarningCommand(args); };
+    commands["force-vt"] = [this](const std::vector<std::string> &args) { forceVtCommand(args); };
+    commands["right-click-context-menu"] = [this](const std::vector<std::string> &args) { rightClickContextMenuCommand(args); };
+    commands["search-web-url"] = [this](const std::vector<std::string> &args) { searchWebUrlCommand(args); };
+    commands["test"] = [this](const std::vector<std::string> &args) { testCommand(args); };
+    commands["language"] = [this](const std::vector<std::string> &args) { languageCommand(args); };
+    commands["theme"] = [this](const std::vector<std::string> &args) { themeCommand(args); };
+    commands["always-show-tabs"] = [this](const std::vector<std::string> &args) { alwaysShowTabsCommand(args); };
+    commands["new-tab-position"] = [this](const std::vector<std::string> &args) { newTabPositionCommand(args); };
+    commands["show-tabs-in-titlebar"] = [this](const std::vector<std::string> &args) { showTabsInTitlebarCommand(args); };
+    commands["use-acrylic-in-tab-row"] = [this](const std::vector<std::string> &args) { useAcrylicInTabRowCommand(args); };
+    commands["show-terminal-title-in-titlebar"] = [this](const std::vector<std::string> &args) { showTerminalTitleInTitlebarCommand(args); };
+    commands["always-on-top"] = [this](const std::vector<std::string> &args) { alwaysOnTopCommand(args); };
+    commands["tab-width-mode"] = [this](const std::vector<std::string> &args) { tabWidthModeCommand(args); };
+    commands["disable-animations"] = [this](const std::vector<std::string> &args) { disableAnimationsCommand(args); };
+    commands["confirm-close-all-tabs"] = [this](const std::vector<std::string> &args) { confirmCloseAllTabsCommand(args); };
   }
 
   bool validateAndSetFontWeight(const std::string &weight, json &settings, const std::string &profileName) {
@@ -1106,6 +1137,368 @@ private:
     std::cout << "Launch mode set to '" << mode << "' successfully." << std::endl;
     std::cout << "Note: Changes will take effect the next time Windows Terminal is launched." << std::endl;
   }
+
+  void enableUnfocusedAcrylicCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta enable-unfocused-acrylic <true|false>" << std::endl;
+      std::cout << "Controls if unfocused acrylic is possible. When true, unfocused windows can have acrylic instead of opaque." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["compatibility.enableUnfocusedAcrylic"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Enable unfocused acrylic set to " << option << " successfully." << std::endl;
+  }
+
+  void copyOnSelectCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta copy-on-select <true|false>" << std::endl;
+      std::cout << "When true, a selection is immediately copied to clipboard upon creation." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["copyOnSelect"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Copy on select set to " << option << " successfully." << std::endl;
+  }
+
+  void copyFormattingCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta copy-formatting <true|false|all|none|html|rtf>" << std::endl;
+      std::cout << "Controls whether color and font formatting is copied along with text." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false" && option != "all" && option != "none" && option != "html" && option != "rtf") {
+      std::cerr << "Invalid option: " << option << ". Use 'true', 'false', 'all', 'none', 'html', or 'rtf'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    if (option == "true" || option == "false") {
+      settings["copyFormatting"] = (option == "true");
+    } else {
+      settings["copyFormatting"] = option;
+    }
+    fileManager.writeSettings();
+    std::cout << "Copy formatting set to " << option << " successfully." << std::endl;
+  }
+
+  void trimBlockSelectionCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta trim-block-selection <true|false>" << std::endl;
+      std::cout << "When true, trailing white-space is removed from each line in rectangular selection." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["trimBlockSelection"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Trim block selection set to " << option << " successfully." << std::endl;
+  }
+
+  void trimPasteCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta trim-paste <true|false>" << std::endl;
+      std::cout << "When enabled, automatically trims trailing whitespace when pasting text." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["trimPaste"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Trim paste set to " << option << " successfully." << std::endl;
+  }
+
+  void wordDelimitersCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta word-delimiters <delimiters>" << std::endl;
+      std::cout << "Sets the word delimiters used in double-click selection." << std::endl;
+      std::cout << "Default: \" /\\\\()\\\"'-:,.;<>~!@#$%^&*|+=[]{}?│\"" << std::endl;
+      std::cout << "Note: Escape \\ and \" characters with backslash." << std::endl;
+      return;
+    }
+
+    std::string delimiters = args[0];
+    json &settings = fileManager.getSettings();
+    settings["wordDelimiters"] = delimiters;
+    fileManager.writeSettings();
+    std::cout << "Word delimiters set successfully." << std::endl;
+  }
+
+  void snapToGridCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta snap-to-grid <true|false>" << std::endl;
+      std::cout << "When true, window will snap to nearest character boundary on resize." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["snapToGridOnResize"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Snap to grid on resize set to " << option << " successfully." << std::endl;
+  }
+
+  void minimizeToNotificationCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta minimize-to-notification <true|false>" << std::endl;
+      std::cout << "When true, minimizing will hide window from taskbar and show in notification area." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["minimizeToNotificationArea"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Minimize to notification area set to " << option << " successfully." << std::endl;
+  }
+
+  void alwaysShowNotificationCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta always-show-notification <true|false>" << std::endl;
+      std::cout << "When true, terminal will always place its icon in the notification area." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["alwaysShowNotificationIcon"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Always show notification icon set to " << option << " successfully." << std::endl;
+  }
+
+  void tabSwitcherModeCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta tab-switcher-mode <true|false|mru|inOrder|disabled>" << std::endl;
+      std::cout << "Controls tab switcher interface style and behavior." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false" && option != "mru" && option != "inOrder" && option != "disabled") {
+      std::cerr << "Invalid option: " << option << ". Use 'true', 'false', 'mru', 'inOrder', or 'disabled'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    if (option == "true" || option == "false") {
+      settings["tabSwitcherMode"] = (option == "true");
+    } else {
+      settings["tabSwitcherMode"] = option;
+    }
+    fileManager.writeSettings();
+    std::cout << "Tab switcher mode set to " << option << " successfully." << std::endl;
+  }
+
+  void useTabSwitcherCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta use-tab-switcher <true|false>" << std::endl;
+      std::cout << "When true, nextTab and prevTab commands will use the tab switcher UI." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["useTabSwitcher"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Use tab switcher set to " << option << " successfully." << std::endl;
+  }
+
+  void autoHideWindowCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta auto-hide-window <true|false>" << std::endl;
+      std::cout << "When enabled, terminal window will automatically hide when it loses focus." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["autoHideWindow"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Auto hide window set to " << option << " successfully." << std::endl;
+  }
+
+  void focusFollowMouseCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta focus-follow-mouse <true|false>" << std::endl;
+      std::cout << "When true, terminal will move focus to pane on mouse hover." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["focusFollowMouse"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Focus follow mouse set to " << option << " successfully." << std::endl;
+  }
+
+  void detectUrlsCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta detect-urls <true|false>" << std::endl;
+      std::cout << "When true, URLs will be detected and made clickable (experimental feature)." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["experimental.detectURLs"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Detect URLs set to " << option << " successfully." << std::endl;
+  }
+
+  void largePasteWarningCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta large-paste-warning <true|false>" << std::endl;
+      std::cout << "When true, warns when pasting text larger than 5 KiB." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["largePasteWarning"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Large paste warning set to " << option << " successfully." << std::endl;
+  }
+
+  void multiLinePasteWarningCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta multiline-paste-warning <true|false>" << std::endl;
+      std::cout << "When true, warns when pasting text with multiple lines." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["multiLinePasteWarning"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Multi-line paste warning set to " << option << " successfully." << std::endl;
+  }
+
+  void forceVtCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta force-vt <true|false>" << std::endl;
+      std::cout << "Forces terminal to use legacy input encoding (experimental feature)." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["experimental.input.forceVT"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Force VT input set to " << option << " successfully." << std::endl;
+  }
+
+  void rightClickContextMenuCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta right-click-context-menu <true|false>" << std::endl;
+      std::cout << "When true, right-click activates context menu instead of paste." << std::endl;
+      return;
+    }
+
+    std::string option = args[0];
+    if (option != "true" && option != "false") {
+      std::cerr << "Invalid option: " << option << ". Use 'true' or 'false'." << std::endl;
+      return;
+    }
+
+    json &settings = fileManager.getSettings();
+    settings["experimental.rightClickContextMenu"] = (option == "true");
+    fileManager.writeSettings();
+    std::cout << "Right-click context menu set to " << option << " successfully." << std::endl;
+  }
+
+  void searchWebUrlCommand(const std::vector<std::string> &args) {
+    if (args.size() != 1) {
+      std::cerr << "Usage: wta search-web-url <url>" << std::endl;
+      std::cout << "Sets the default URL for web searching. Use %s as placeholder for selected text." << std::endl;
+      std::cout << "Example: wta search-web-url \"https://www.google.com/search?q=%s\"" << std::endl;
+      return;
+    }
+
+    std::string url = args[0];
+    json &settings = fileManager.getSettings();
+    settings["searchWebDefaultQueryUrl"] = url;
+    fileManager.writeSettings();
+    std::cout << "Search web URL set successfully." << std::endl;
+  }
 };
 
 int main(int argc, char *argv[]) {
@@ -1122,7 +1515,8 @@ int main(int argc, char *argv[]) {
   }
 
   WTACommandManager commandManager;
-  commandManager.executeCommand(command, args);
 
+  commandManager.executeCommand(command, args);
+  
   return 0;
 }
